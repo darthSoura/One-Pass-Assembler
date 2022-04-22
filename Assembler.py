@@ -47,14 +47,24 @@ for line in data:
         size = int(words[-1])
         loc = str(hex(int(loc, 16) + size)[2:])
     
+    elif words[-2] == 'BYTE':
+        if words[-3] == 'EOF':
+            objCode[str.upper(loc)] = '454F46'
+            loc = str(hex(int(loc, 16) + 3)[2:])
+        else:
+            objCode[str.upper(loc)] = str.upper(words[-1][-3:-1])
+            loc = str(hex(int(loc, 16) + 1)[2:])
     
-    elif words[-2] != 'START' and words[-2] != 'BYTE':
+    elif words[-2] != 'START':
         
         if words[-2] == 'WORD':
             objCode[str.upper(loc)] = str.upper('000000' + str(hex(int(words[-1])))[2:])[-6:]
     
         else:
-            if words[-1] in labels:
+            if ',' in words[-1]:
+                objCode[str.upper(loc)] = OPTAB[words[-2]] + str.upper(str(hex(int(labels[words[-1][:-2]], 16) + 32768))[2:])
+                
+            elif words[-1] in labels:
                 objCode[str.upper(loc)] = OPTAB[words[-2]] + labels[words[-1]]
                 
             else:
@@ -67,13 +77,7 @@ for line in data:
             
         loc = str(hex(int(loc, 16) + 3)[2:])
         
-    elif words[-2] == 'BYTE':
-        if words[-3] == 'EOF':
-            objCode[str.upper(loc)] = '454F46'
-            loc = str(hex(int(loc, 16) + 3)[2:])
-        else:
-            objCode[str.upper(loc)] = str.upper(words[-1][-3:-1])
-            loc = str(hex(int(loc, 16) + 1)[2:])
+    
 
 # print(labels)
 
