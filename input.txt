@@ -5,7 +5,7 @@ ZERO    WORD    0
 RETADR  RESW    1
 LENGTH  RESW    1
 BUFFER  RESB    4096
-..
+.
 FIRST   STL     RETADR
 CLOOP   JSUB    RDREC
         LDA     LENGTH
