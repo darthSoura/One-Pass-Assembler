@@ -15,6 +15,25 @@ objCode = {}
 labels = {}
 backRef = {}
 
-for line in data:
+def hex_add(addr, bytes):
     
     pass
+
+for line in data:
+    words = line.split()
+    if len(words) == 3: # add label and address
+        labels[words[0]] = loc
+        
+    if words[-2] != 'START' and words[-2] != 'BYTE':
+        loc += 3
+    
+    else:
+        continue
+    
+    if words[-2] == 'BYTE':
+        if words[-3] == 'EOF':
+            loc += 3
+        else:
+            loc += 1
+
+print(labels)
