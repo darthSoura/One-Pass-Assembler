@@ -1,11 +1,11 @@
-OPTAB = {'ADD': '18', 'COMP': '28', 'DIV': '24', 'J': '3C',
-         'JEQ':'30', 'JGT': '34', 'JLT': '38', 'JSUB': '48', 
-         'LDA': '00', 'LDCH': '50', 'LDL': '08', 'LDX': '04',
-         'MUL': '20', 'OR': '44', 'RD': 'D8', 'RSUB': '4C', 
-         'STA': '0C', 'STCH': '54', 'STL': '14', 'STSW': 'E8',
-         'STX': '10', 'SUB': '1C', 'TD': 'E0', 'TIX': '2C', 'WD': 'DC'}
+OPTAB = {"ADD": "18", "COMP": "28", "DIV": "24", "J": "3C",
+         "JEQ":"30", "JGT": "34", "JLT": "38", "JSUB": "48", 
+         "LDA": "00", "LDCH": "50", "LDL": "08", "LDX": "04",
+         "MUL": "20", "OR": "44", "RD": "D8", "RSUB": "4C", 
+         "STA": "0C", "STCH": "54", "STL": "14", "STSW": "E8",
+         "STX": "10", "SUB": "1C", "TD": "E0", "TIX": "2C", "WD": "DC"}
 
-with open('input.txt', 'r') as file:
+with open("input.txt", "r") as file:
     data = file.readlines()
     
 loc = data[0].split()[-1]
@@ -15,16 +15,16 @@ objCode = {}
 labels = {}
 forRef = {}
 
-file = open("output.txt", 'w+')
+file = open("output.txt", "w+")
 
 current = ""
 
 for line in data:
     words = line.split()
-    if(words[0] == '.'):
+    if(words[0] == "."):
         continue
     
-    if len(words) > 1 and words[-2] not in ['RESW', 'RESB'] and current == "":
+    if len(words) > 1 and words[-2] not in ["RESW", "RESB"] and current == "":
         current = "T^00"+loc.upper()+"^" 
         
     if len(words) == 3: # add label and address
@@ -43,16 +43,16 @@ for line in data:
         labels[words[0]] = loc.upper()
     
     if len(words) == 1: # for RSUB
-        objCode[loc.upper()] = OPTAB[words[-1]] + '0000'        
+        objCode[loc.upper()] = OPTAB[words[-1]] + "0000"        
         current += "^" + objCode[loc.upper()]
         loc = str(hex(int(loc, 16) + 3)[2:])
         continue
     
     # Handle the case of buffer and array lengths
-    if words[-2] == 'START' or words[-2] == 'END':
+    if words[-2] == "START" or words[-2] == "END":
         
-        if words[-2] == 'START':
-            current = 'H^'
+        if words[-2] == "START":
+            current = "H^"
             if(len(words[0])<6):
                 current += words[0] + (" ")*(6-len(words[0]))
                 current += "^00" + loc.upper() + "^00" + loc.upper()
@@ -60,7 +60,7 @@ for line in data:
             file.write(current+"\n")
             current = ""
         
-        if words[-2] == 'END':
+        if words[-2] == "END":
             labels[words[-2]] = loc.upper()
             length_TR = str.upper(str(hex((len(current)-7-current.count("^"))//2))[2:].zfill(2))
             current = current[:9] + length_TR + current[9:]
@@ -75,17 +75,17 @@ for line in data:
         file.write(current+ "\n")
         current = ""
     
-    if words[-2] == 'RESW':
+    if words[-2] == "RESW":
         size = int(words[-1])*3
         loc = str(hex(int(loc, 16) + size)[2:]) 
     
-    elif words[-2] == 'RESB':
+    elif words[-2] == "RESB":
         size = int(words[-1])
         loc = str(hex(int(loc, 16) + size)[2:])
     
-    elif words[-2] == 'BYTE':
-        if words[-1][0]=='C':
-            objCode[loc.upper()] = ''.join([hex(ord(x))[2:] for x in words[-1][2:-1]]).upper() 
+    elif words[-2] == "BYTE":
+        if words[-1][0]=="C":
+            objCode[loc.upper()] = "".join([hex(ord(x))[2:] for x in words[-1][2:-1]]).upper() 
             current += "^" + objCode[loc.upper()]    
             loc = str(hex(int(loc, 16) + 3)[2:])
         else:
@@ -93,18 +93,15 @@ for line in data:
             current += "^" + objCode[loc.upper()]    
             loc = str(hex(int(loc, 16) + 1)[2:])
     
-    elif words[-2] != 'START':
+    elif words[-2] != "START":
         
-        if words[-2] == 'WORD':
+        if words[-2] == "WORD":
             objCode[loc.upper()] = str(hex(int(words[-1])))[2:].zfill(6)
             current += "^" + objCode[loc.upper()]    
         else:
-            if ',' in words[-1]:
+            if "," in words[-1]:
                 if words[-1][:-2] in labels:
-                    # current += "^" + OPTAB[words[-2]] + 
-                    objCode[loc.upper()] = OPTAB[words[-2]] + str.upper(str(hex(int(labels[words[-1][:-2]], 16) + 32768))[2:])
-                    current += "^" + objCode[loc.upper()]    
-                    
+                    current += "^" + OPTAB[words[-2]] + str(int(labels[words[-1][:-2]][0]) | 8 ) + labels[words[-1][:-2]][1:]
                 else:
                     if words[-1][:-2] in forRef:
                         forRef[words[-1][:-2]].append(str.upper(str(hex(int(loc,16)+1))[2:]))
@@ -114,18 +111,16 @@ for line in data:
                     current += "^" + objCode[loc.upper()]   
 
             elif words[-1] in labels:
-                objCode[loc.upper()] = OPTAB[words[-2]] + labels[words[-1]]
-                current += "^" + objCode[loc.upper()]    
+                current += "^" + OPTAB[words[-2]] + str(int(labels[words[-1]][0]) & 7 ) + labels[words[-1]][1:]
                 
             else:
                 if words[-1] in forRef:
                     forRef[words[-1]].append(str.upper(str(hex(int(loc,16)+1))[2:]))
                 else:
-                    forRef[words[-1]]= [str.upper(str(hex(int(loc,16)+1))[2:])]
+                    forRef[words[-1]]= [str(hex(int(loc,16)+1))[2:].upper()]
                 
-                objCode[loc.upper()] = OPTAB[words[-2]] + '0000'
+                objCode[loc.upper()] = OPTAB[words[-2]] + "0000"
                 current += "^" + objCode[loc.upper()]    
-            
         
         loc = str(hex(int(loc, 16) + 3)[2:])
     
@@ -140,7 +135,7 @@ file.seek(0)
 file.seek((file.readline()).rindex("^"))
 current = "^" + str.upper(str(hex(int(loc,16) - int(start,16)))[2:]).zfill(6)
 
-file.write(current )
+file.write(current)
 file.close()
 
 # for key, value in labels.items():
