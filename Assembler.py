@@ -10,12 +10,13 @@ with open('input.txt', 'r') as file:
     data = file.readlines()
     
 loc = data[0].split()[-1]
+start  = loc
 
 objCode = {}
 labels = {}
 forRef = {}
 
-file = open("output.txt", 'w')
+file = open("output.txt", 'w+')
 
 s = ""
 
@@ -25,7 +26,7 @@ for line in data:
         continue
     
     if len(words) > 1 and words[-2] not in ['RESW', 'RESB'] and s == "":
-        s = "T^00"+str.upper(loc)+"^"
+        s = "T^00"+str.upper(loc)+"^" 
         
     if len(words) == 3: # add label and address
         
@@ -56,7 +57,7 @@ for line in data:
             s = 'H^'
             if(len(words[0])<6):
                 s += words[0] + (" ")*(6-len(words[0]))
-                s += "^00" + loc + "^"
+                s += "^00" + str.upper(loc) + "^00" + str.upper(loc)
                 
             file.write(s+"\n")
             s = ""
@@ -145,6 +146,11 @@ for line in data:
 # print("Object Code: ", objCode)
 # print("Forward References: ", forRef)
 
+file.seek(0)
+file.seek((file.readline()).rindex("^"))
+s = "^" + str.upper(str(hex(int(loc,16) - int(start,16)))[2:]).zfill(6)
+
+file.write(s )
 file.close()
 
 # for key, value in labels.items():
