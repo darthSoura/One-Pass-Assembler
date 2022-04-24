@@ -1,6 +1,18 @@
+'''
+    System Programming Assignment Group Number : 1
+    Group Members:
+            Zubin Shah - 20CSE1030
+            Souradeep Banerjee - 20CSE1035
+            
+    Group Topic:
+            One pass assembler that generates object program
+'''                                                                            
+
 import sys
 from OpTable import OPTAB 
 # OPTAB - Opcode Table
+
+# --------------------------- HELPER FUNCTIONS ----------------------------#
 
 def TR_size(curr):
     '''
@@ -80,9 +92,12 @@ def write_to_file(curr, f):
 
 if __name__ == "__main__": # main method
     
-    if(len(sys.argv) < 2): # name of input file needs to be mentioned as a command line argument
+    if(len(sys.argv) < 2): # input and output filenames need to be mentioned as command line arguments
         print("Enter filename as command line argument.")
         exit() 
+    
+    elif(len(sys.argv) < 3):
+        print("Output filename not entered.")
         
     with open(sys.argv[1], 'r') as file:
         data = file.readlines() # the input file lines read and stored in a list
@@ -94,7 +109,7 @@ if __name__ == "__main__": # main method
     forRef = {} # dictionary for storing Forward References
     current = "" # for current Text Record
 
-    file = open("output.txt", 'w+') # open a file in write+ mode
+    file = open(sys.argv[2], 'w+') # open a file in write+ mode
 
     for line in data: 
         words = line.split() # split each line of input into list of words
@@ -127,79 +142,84 @@ if __name__ == "__main__": # main method
             loc = update_loc(loc, 1, 3) # update loc
             continue
         
-        # Handle the case of buffer and array lengths
-        if words[-2] in ['START', 'END']:
-            
+        if words[-2] in ['START', 'END']: 
+            # special text records for the two
             if words[-2] == 'START':
-                current = 'H^' + words[0][:6]
-                if(len(words[0])<6):
+                current = 'H^' + words[0][:6] # 6 bits for name
+                if(len(words[0])<6): 
                     current += (" ")*(6-len(words[0]))
-                current += ("^00" + loc)*2
+                current += ("^00" + loc)*2  # starting address (twice to ensure ease of writing program length later)
                     
-                file.write(current + "\n")
-                current = ""
+                file.write(current + "\n") # Header record written to file and current re-initialized
+                current = "" 
             
             else:
-                labels[words[-2]] = loc
-                write_to_file(current, file)
-                current = "E^00" + labels[words[-1]] + "\n"
-                file.write(current)
+                labels[words[-2]] = loc 
+                write_to_file(current, file) # write current Text Record to file
+                current = "E^00" + labels[words[-1]] + "\n" 
+                file.write(current) # write the End record to file
         
         elif words[-2] in ["RESW", "RESB"]:
+            # no object code for these words
             if current != "":
-                write_to_file(current, file)
+                write_to_file(current, file) # if a Text record is there, write it and reset current
                 current = ""
                 
-            if words[-2] == 'RESW':
+            if words[-2] == 'RESW': # update loc accordingly
                 loc = update_loc(loc, words[-1], 3) 
             else: 
                 loc = update_loc(loc, words[-1], 1)
                     
-        elif words[-2] == 'BYTE':
-            if words[-1][0]=='C':
-                if TR_size(current) + 3 > 30:
+        elif words[-2] == 'BYTE': 
+            # special Object codes
+            if words[-1][0]=='C': # for a character byte
+                if TR_size(current) + 3 > 30: # size checking
                     write_to_file(current, file)
                     current = init_current(loc)
                         
-                current += "^" + (''.join([hex(ord(x))[2:] for x in words[-1][2:-1]]).upper() + "000000")[:6]    # generate Object code from the the ASCII equivalent of the character
+                current += "^" + (''.join([hex(ord(x))[2:] for x in words[-1][2:-1]]).upper() + "000000")[:6]    # generate Object code from the the ASCII equivalent of the character(s)       ord(x) gives the ASCII of a character
                 loc = update_loc(loc, 1, 3)  
                 
-            else:
-                if TR_size(current) + 1 > 30:
+            else: # for a X byte
+                if TR_size(current) + 1 > 30: # size checking
                     write_to_file(current, file)
                     current = init_current(loc)
                         
-                current += "^" + words[-1][2:-1].upper()
-                loc = update_loc(loc, 1, 1)
+                current += "^" + words[-1][2:-1].upper() # byte data stored as Object Code to current Text Record
+                loc = update_loc(loc, 1, 1) # loc updated accordingly
         
         else:
-            if TR_size(current) + 3 > 30:
+            # for all other Operands
+            if TR_size(current) + 3 > 30: # size checking of Text Record
                 write_to_file(current, file)            
                 current = init_current(loc)
             
-            if words[-2] == 'WORD':
+            if words[-2] == 'WORD': # for WORD memory storage
                 current += "^" + str(hex(int(words[-1])))[2:].zfill(6)    
+                # integer space converted to hex and stored in Object Code
             else:
-                if ',' in words[-1]:
+                if ',' in words[-1]: # handling indexed Operators
                     if words[-1][:-2] in labels:
-                        current += '^' + OPTAB[words[-2]] + hex(int(labels[words[-1][:-2]],16) | int("8000",16))[2:].zfill(4).upper()
-                    else:
-                        forRef = add_to_forRef(forRef, words[-1][:-2], loc)
-                        current += "^" + OPTAB[words[-2]] + "8000"   
+                        current += '^' + OPTAB[words[-2]] + hex(int(labels[words[-1][:-2]],16) | int("8000",16))[2:].zfill(4).upper() # flag the index bit
+                    else: # Forward Reference 
+                        forRef = add_to_forRef(forRef, words[-1][:-2], loc) # add to forRef table
+                        current += "^" + OPTAB[words[-2]] + "8000" # mention the index in Object Code
 
-                elif words[-1] in labels:
-                    current += '^' + OPTAB[words[-2]] + hex(int(labels[words[-1]],16) & int("7FFF",16))[2:].zfill(4).upper()    
+                elif words[-1] in labels: # handling normal references
+                    current += '^' + OPTAB[words[-2]] + hex(int(labels[words[-1]],16) & int("7FFF",16))[2:].zfill(4).upper() # use only 15 bits of the referenced address as per SIC architecture
                     
                 else:
-                    forRef = add_to_forRef(forRef, words[-1], loc)
-                    current += "^" + OPTAB[words[-2]] + '0000'    
+                    forRef = add_to_forRef(forRef, words[-1], loc) # put Forward reference in forRef
+                    current += "^" + OPTAB[words[-2]] + '0000' # add just the Opcode
                 
-            loc = update_loc(loc, 1, 3)
+            loc = update_loc(loc, 1, 3) # update loc 
 
-    end = loc
+    end = loc # ending address
+    
+    # write the length of the program in the Header Record
     file.seek(0)
-    file.seek((file.readline()).rindex("^")+1)
-    current = str(hex(int(end,16) - int(start,16)))[2:].upper().zfill(6)
+    file.seek((file.readline()).rindex("^")+1) # put pointer at location
+    current = str(hex(int(end,16) - int(start,16)))[2:].upper().zfill(6) # format current with program length
 
     file.write(current)
-    file.close()
+    file.close() # write the length and close the file
