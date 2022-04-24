@@ -1,20 +1,66 @@
-from OpTable import OPTAB
+import sys
+from OpTable import OPTAB 
+# OPTAB - Opcode Table
 
-def TR_size(cur):
-    return (len(cur)-7-cur.count("^"))//2
+def TR_size(curr):
+    '''
+    Function to return the size of the passed Text Record
+    
+    cur - Current Text Record of the form -> "T^00ABCD^^00xxxx^00yyyy^"
+    
+    Length = (len(cur) - (len("T") + len("00ABCD") + count("^")))//2
+    (Length is divided by 2 because a 6 bit object code is of the size 3 bytes)
+    '''
+    return (len(curr)-7-curr.count("^"))//2
 
 def init_current(addr):
+    '''
+    Function to initialize the current Text Record starting from the current loc
+    
+    addr - Current Location
+    
+    Text record initialised as -> "T^00addr^"
+    '''
     return "T^00"+addr+"^" 
     
 def final_current(curr):
-    length = str.upper(str(hex(TR_size(curr))))[2:].zfill(2)
-    return curr[:9] + length + curr[9:] + "\n"
+    '''
+    Function to finalise the current Text Record by inserting its length and returns the final Text Record
+    
+    curr - current Text Record
+    
+    length -> Hex(TR_size(curr)) in 2 bits
+    After Insertion, TE -> "T^00ABCD^xx^00yyyy^...."
+    '''
+    length = str(hex(TR_size(curr)))[2:].zfill(2).upper()
+    return curr[:9] + length + curr[9:] + "\n" # newline to write in file
 
 def update_loc(loc, n, bytes):
+    '''
+    Function to update the current location value with the passed parameters and return the loc value
+    
+    loc - Current Location
+    n - No. of words
+    bytes - Size of each word
+    
+    Current address is converted back to int from hex, size is added, then converted back to hex and returned
+    '''
     size = int(n)*bytes
     return str(hex(int(loc, 16) + size)[2:]).upper()
 
 def add_to_forRef(fR, key, addr):
+    '''
+    Function to add/append a Forward Reference to the forRef dictionary and return the dictionary
+    
+    fR - Forward Reference Dictionary
+    key - Name of the Forward Reference
+    addr - Address corresponding to the Forward Reference
+    
+    if key is in fR, then addr is appended to the existing list,
+    else create a new list with the passed key
+    
+    Address stored in list will be 1 more than the addr passed (to make for the OPCODE)
+    '''
     if key in fR:
         fR[key].append(str(hex(int(addr,16)+1))[2:].upper())
     else:
@@ -23,51 +69,62 @@ def add_to_forRef(fR, key, addr):
     return fR
  
 def write_to_file(curr, f):
-    f.write(final_current(curr)) 
-
-if __name__ == "__main__":
+    '''
+    Function to write a Text Record to file
     
-    with open('input.txt', 'r') as file:
-        data = file.readlines()
+    curr - Text Record
+    f - File Pointer in write/write+ mode
+    '''
+    if TR_size(curr) != 0: # make sure to not write an empty Text Record
+        f.write(final_current(curr)) 
+
+if __name__ == "__main__": # main method
+    
+    if(len(sys.argv) < 2): # name of input file needs to be mentioned as a command line argument
+        print("Enter filename as command line argument.")
+        exit() 
         
-    loc = data[0].split()[-1].upper()
+    with open(sys.argv[1], 'r') as file:
+        data = file.readlines() # the input file lines read and stored in a list
+        
+    loc = data[0].split()[-1].upper() # starting address stored
     start  = loc
         
-    labels = {}
-    forRef = {}
-    current = ""
+    labels = {} # dictionary for storing Labels
+    forRef = {} # dictionary for storing Forward References
+    current = "" # for current Text Record
 
-    file = open("output.txt", 'w+')
+    file = open("output.txt", 'w+') # open a file in write+ mode
 
-    for line in data:
-        words = line.split()
-        if(words[0] == '.'):
-            continue
+    for line in data: 
+        words = line.split() # split each line of input into list of words
+        if(words[0] == '.'): 
+            continue # comment in the input file, ignore line
         
-        if len(words) > 1 and words[-2] not in ['RESW', 'RESB'] and current == "":
+        if len(words) > 1 and words[-2] not in ['RESW', 'RESB'] and current == "": 
+            # if Operand is not RESW or RESB, and Text Record is currently null, then initialize Text Record with the the current location
             current = init_current(loc)
             
-        if len(words) == 3: # add label and address
+        if len(words) == 3: # line with a label
             
-            if words[0] in forRef.keys():
-                write_to_file(current, file)
-                for objc in forRef[words[0]]:
+            if words[0] in forRef.keys(): # if a Forward Reference is caught
+                write_to_file(current, file) # write the current text record, 
+                for objc in forRef[words[0]]: # write all forwards references as Text Records to file
                     current = init_current(objc) + "02^" + loc
                     file.write(current + "\n")
                     
-                del forRef[words[0]]
-                current = init_current(loc)
+                del forRef[words[0]] # delete the Forward Reference from the dictionary
+                current = init_current(loc) # initialize 
 
             labels[words[0]] = loc
         
         if len(words) == 1: # for RSUB
-            if TR_size(current) + 3 > 30:
-                write_to_file(current, file)
-                current = init_current(loc)
-                continue
+            if TR_size(current) + 3 > 30: # size checking of Text Record
+                write_to_file(current, file) 
+                current = init_current(loc) 
                 
-            current += "^" + OPTAB[words[-1]] + '0000'
-            loc = update_loc(loc, 1, 3)
+            current += "^" + OPTAB[words[-1]] + '0000' # append to text record
+            loc = update_loc(loc, 1, 3) # update loc
             continue
         
         # Handle the case of buffer and array lengths
