@@ -1,15 +1,13 @@
-OPTAB = {'ADD': '18', 'COMP': '28', 'DIV': '24', 'J': '3C',
-         'JEQ':'30', 'JGT': '34', 'JLT': '38', 'JSUB': '48', 
-         'LDA': '00', 'LDCH': '50', 'LDL': '08', 'LDX': '04',
-         'MUL': '20', 'OR': '44', 'RD': 'D8', 'RSUB': '4C', 
-         'STA': '0C', 'STCH': '54', 'STL': '14', 'STSW': 'E8',
-         'STX': '10', 'SUB': '1C', 'TD': 'E0', 'TIX': '2C', 'WD': 'DC'}
+from OpTable import OPTAB
 
 with open('input.txt', 'r') as file:
     data = file.readlines()
     
 loc = data[0].split()[-1]
 start  = loc
+
+def TR_size(cur):
+    return (len(cur)-7-cur.count("^"))//2
 
 labels = {}
 forRef = {}
@@ -42,6 +40,13 @@ for line in data:
         labels[words[0]] = loc.upper()
     
     if len(words) == 1: # for RSUB
+        if TR_size(current) + 3 > 30:
+            length_TR = str.upper(str(hex(TR_size(current))))[2:].zfill(2)
+            current = current[:9] + length_TR + current[9:]
+            file.write(current+"\n")
+            current = "T^00"+loc.upper()+"^"
+            continue
+            
         current += "^" + OPTAB[words[-1]] + '0000'
         loc = str(hex(int(loc, 16) + 3)[2:])
         continue
@@ -50,17 +55,17 @@ for line in data:
     if words[-2] == 'START' or words[-2] == 'END':
         
         if words[-2] == 'START':
-            current = 'H^'
+            current = 'H^' + words[0][:6]
             if(len(words[0])<6):
-                current += words[0] + (" ")*(6-len(words[0]))
-                current += "^00" + loc.upper() + "^00" + loc.upper()
+                current += (" ")*(6-len(words[0]))
+            current += "^00" + loc.upper() + "^00" + loc.upper()
                 
             file.write(current+"\n")
             current = ""
         
         if words[-2] == 'END':
             labels[words[-2]] = loc.upper()
-            length_TR = str.upper(str(hex((len(current)-7-current.count("^"))//2))[2:].zfill(2))
+            length_TR = str.upper(str(hex(TR_size(current))))[2:].zfill(2)
             current = current[:9] + length_TR + current[9:]
             file.write(current+"\n")
             current = "E^00" + labels[words[-1]] + "\n"
@@ -68,7 +73,7 @@ for line in data:
         continue
     
     if words[-2] in ["RESW", "RESB"] and current != "":
-        length_TR = str.upper(str(hex((len(current)-7-current.count("^"))//2))[2:].zfill(2))
+        length_TR = str.upper(str(hex(TR_size(current)))[2:].zfill(2))
         current = current[:9] + length_TR + current[9:]
         file.write(current+ "\n")
         current = ""
@@ -83,13 +88,31 @@ for line in data:
     
     elif words[-2] == 'BYTE':
         if words[-1][0]=='C':
+            if TR_size(current) + 3 > 30:
+                length_TR = str.upper(str(hex(TR_size(current))))[2:].zfill(2)
+                current = current[:9] + length_TR + current[9:]
+                file.write(current+"\n")
+                current = "T^00"+loc.upper()+"^"
+            
             current += "^" + ''.join([hex(ord(x))[2:] for x in words[-1][2:-1]]).upper()    # generate Object code from the the ASCII equivalent of the character
             loc = str(hex(int(loc, 16) + 3)[2:])
         else:
+            if TR_size(current) + 1 > 30:
+                length_TR = str.upper(str(hex(TR_size(current))))[2:].zfill(2)
+                current = current[:9] + length_TR + current[9:]
+                file.write(current+"\n")
+                current = "T^00"+loc.upper()+"^"
+            
             current += "^" + str.upper(words[-1][2:-1])    
             loc = str(hex(int(loc, 16) + 1)[2:])
     
     elif words[-2] != 'START':
+        if TR_size(current) + 3 > 30:
+            # print(TR_size(current), " -- ", current)
+            length_TR = str.upper(str(hex(TR_size(current))))[2:].zfill(2)
+            current = current[:9] + length_TR + current[9:]
+            file.write(current+"\n")
+            current = "T^00"+loc.upper()+"^"
         
         if words[-2] == 'WORD':
             current += "^" + str(hex(int(words[-1])))[2:].zfill(6)    
@@ -125,12 +148,3 @@ current = str(hex(int(end,16) - int(start,16)))[2:].upper().zfill(6)
 
 file.write(current)
 file.close()
-
-# for key, value in labels.items():
-#     print(key, value, sep=" ")
-
-# for key, value in objCode.items():
-#     print(key, value, sep=" ")
-
-# for key, value in forRef.items():
-#     print(key, value, sep=" ")
