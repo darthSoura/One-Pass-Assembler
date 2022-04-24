@@ -12,13 +12,13 @@ def final_current(curr):
 
 def update_loc(loc, n, bytes):
     size = int(n)*bytes
-    return str(hex(int(loc, 16) + size)[2:])
+    return str(hex(int(loc, 16) + size)[2:]).upper()
 
 def add_to_forRef(fR, key, addr):
     if key in fR:
-        fR[key].append(str.upper(str(hex(int(addr,16)+1))[2:]))
+        fR[key].append(str(hex(int(addr,16)+1))[2:].upper())
     else:
-        fR[key] = [str.upper(str(hex(int(addr,16)+1))[2:])]
+        fR[key] = [str(hex(int(addr,16)+1))[2:].upper()]
     
     return fR
  
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     with open('input.txt', 'r') as file:
         data = file.readlines()
         
-    loc = data[0].split()[-1]
+    loc = data[0].split()[-1].upper()
     start  = loc
         
     labels = {}
@@ -45,25 +45,25 @@ if __name__ == "__main__":
             continue
         
         if len(words) > 1 and words[-2] not in ['RESW', 'RESB'] and current == "":
-            current = init_current(loc.upper())
+            current = init_current(loc)
             
         if len(words) == 3: # add label and address
             
             if words[0] in forRef.keys():
                 write_to_file(current, file)
                 for objc in forRef[words[0]]:
-                    current = init_current(objc) + "02^" + loc.upper()
+                    current = init_current(objc) + "02^" + loc
                     file.write(current + "\n")
                     
                 del forRef[words[0]]
-                current = init_current(loc.upper())
+                current = init_current(loc)
 
-            labels[words[0]] = loc.upper()
+            labels[words[0]] = loc
         
         if len(words) == 1: # for RSUB
             if TR_size(current) + 3 > 30:
                 write_to_file(current, file)
-                current = init_current(loc.upper())
+                current = init_current(loc)
                 continue
                 
             current += "^" + OPTAB[words[-1]] + '0000'
@@ -71,55 +71,54 @@ if __name__ == "__main__":
             continue
         
         # Handle the case of buffer and array lengths
-        if words[-2] == 'START' or words[-2] == 'END':
+        if words[-2] in ['START', 'END']:
             
             if words[-2] == 'START':
                 current = 'H^' + words[0][:6]
                 if(len(words[0])<6):
                     current += (" ")*(6-len(words[0]))
-                current += ("^00" + loc.upper())*2
+                current += ("^00" + loc)*2
                     
                 file.write(current + "\n")
                 current = ""
             
-            if words[-2] == 'END':
-                labels[words[-2]] = loc.upper()
+            else:
+                labels[words[-2]] = loc
                 write_to_file(current, file)
                 current = "E^00" + labels[words[-1]] + "\n"
                 file.write(current)
-            continue
         
-        if words[-2] in ["RESW", "RESB"] and current != "":
-            write_to_file(current, file)
-            current = ""
-        
-        if words[-2] == 'RESW':
-            loc = update_loc(loc, words[-1], 3)  
-        
-        elif words[-2] == 'RESB':
-            loc = update_loc(loc, words[-1], 1)
-            
+        elif words[-2] in ["RESW", "RESB"]:
+            if current != "":
+                write_to_file(current, file)
+                current = ""
+                
+            if words[-2] == 'RESW':
+                loc = update_loc(loc, words[-1], 3) 
+            else: 
+                loc = update_loc(loc, words[-1], 1)
+                    
         elif words[-2] == 'BYTE':
             if words[-1][0]=='C':
                 if TR_size(current) + 3 > 30:
                     write_to_file(current, file)
-                    current = init_current(loc.upper())
+                    current = init_current(loc)
                         
-                current += "^" + ''.join([hex(ord(x))[2:] for x in words[-1][2:-1]]).upper()    # generate Object code from the the ASCII equivalent of the character
+                current += "^" + (''.join([hex(ord(x))[2:] for x in words[-1][2:-1]]).upper() + "000000")[:6]    # generate Object code from the the ASCII equivalent of the character
                 loc = update_loc(loc, 1, 3)  
                 
             else:
                 if TR_size(current) + 1 > 30:
                     write_to_file(current, file)
-                    current = init_current(loc.upper())
+                    current = init_current(loc)
                         
-                current += "^" + str.upper(words[-1][2:-1])    
+                current += "^" + words[-1][2:-1].upper()
                 loc = update_loc(loc, 1, 1)
         
-        elif words[-2] != 'START':
+        else:
             if TR_size(current) + 3 > 30:
                 write_to_file(current, file)            
-                current = init_current(loc.upper())
+                current = init_current(loc)
             
             if words[-2] == 'WORD':
                 current += "^" + str(hex(int(words[-1])))[2:].zfill(6)    
