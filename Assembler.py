@@ -87,7 +87,7 @@ def write_to_file(curr, f):
     curr - Text Record
     f - File Pointer in write/write+ mode
     '''
-    if TR_size(curr) != 0: # make sure to not write an empty Text Record
+    if TR_size(curr) > 0: # make sure to not write an empty or faulty Text Record
         f.write(final_current(curr)) 
 
 if __name__ == "__main__": # main method
@@ -98,6 +98,7 @@ if __name__ == "__main__": # main method
     
     elif(len(sys.argv) < 3):
         print("Output filename not entered.")
+        exit()
         
     with open(sys.argv[1], 'r') as file:
         data = file.readlines() # the input file lines read and stored in a list
