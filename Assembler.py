@@ -93,11 +93,11 @@ def write_to_file(curr, f):
 if __name__ == "__main__": # main method
     
     if(len(sys.argv) < 2): # input and output filenames need to be mentioned as command line arguments
-        print("Enter filename as command line argument.")
+        print("Error!!! Enter input and output filenames as command line arguments.")
         exit() 
     
     elif(len(sys.argv) < 3):
-        print("Output filename not entered.")
+        print("Error !!! Output filename not entered.")
         exit()
         
     with open(sys.argv[1], 'r') as file:
