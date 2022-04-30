@@ -10,7 +10,7 @@ One Pass Assembler in Python
 4. Follow the steps on screen to install Python on your system using Python Installer (don't forget to add Python to PATH).
 
 
-Instructions to run the One Pass Assembler Python script:
+### Instructions to run the One Pass Assembler Python script:
 
 1. Store the input SIC program in a text file named "input1.txt" in the folder containing the "Assembler.py" and "OpTable.py" scripts.
 2. Click on the Address Bar in File Explorer, type 'cmd' and press Enter.
